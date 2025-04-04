@@ -3,6 +3,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { DetectDocumentTextCommand, Block } from '@aws-sdk/client-textract';
 import { s3Client, textractClient, S3_BUCKET_NAME, validateS3Config } from '@/utils/s3';
 import { v4 as uuidv4 } from 'uuid';
+import { chunkDocument } from '@/utils/openai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,9 +41,14 @@ export async function POST(request: NextRequest) {
     await s3Client.send(command);
 
     // Call Textract to get the text from the files
+    console.log("Textract started");
     const extractedText = await extractTextFromImage(buffer);
+    console.log("Textract finished");
 
-    console.log("Extracted text:", extractedText);
+    console.log("Starting to chunk document")
+    const chunks = await chunkDocument(extractedText);
+
+    console.log("Extracted text:", JSON.stringify(chunks, null, 2));
 
     // Return the file information
     return NextResponse.json({
